@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Digit Recogniser</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222222;
+    --accent: #e8ff47;
+    --accent-dim: #c8df27;
+    --text: #f0f0f0;
+    --muted: #666666;
+    --correct: #47ffb2;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  header h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  header h1 span {
+    color: var(--accent);
+  }
+
+  header p {
+    margin-top: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+
+  .main {
+    display: flex;
+    gap: 2.5rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 0.6s ease 0.15s both;
+  }
+
+  .canvas-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .canvas-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: crosshair;
+    transition: border-color 0.2s;
+  }
+
+  .canvas-wrapper:hover {
+    border-color: #444;
+  }
+
+  .canvas-wrapper.drawing {
+    border-color: var(--accent);
+  }
+
+  canvas {
+    display: block;
+    background: #000;
+    touch-action: none;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  button {
+    flex: 1;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+
+  button:hover {
+    background: var(--surface);
+    border-color: #444;
+  }
+
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 500;
+  }
+
+  button.primary:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+  }
+
+  button.primary:active {
+    transform: scale(0.98);
+  }
+
+  .result-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 280px;
+  }
+
+  .prediction-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+    text-align: center;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: border-color 0.3s;
+  }
+
+  .prediction-box.has-result {
+    border-color: var(--accent);
+  }
+
+  .prediction-number {
+    font-size: 5rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent);
+    transition: all 0.2s;
+  }
+
+  .prediction-number.empty {
+    color: var(--border);
+    font-size: 3rem;
+  }
+
+  .confidence-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .confidence-text span {
+    color: var(--correct);
+  }
+
+  .bars-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bar-digit {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    width: 12px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    background: var(--muted);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+  }
+
+  .bar-fill.top {
+    background: var(--accent);
+  }
+
+  .bar-pct {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .status {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-align: center;
+    min-height: 1rem;
+    letter-spacing: 0.05em;
+  }
+
+  .status.thinking {
+    color: var(--accent);
+    animation: pulse 1s ease infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .dot-grid {
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #1a1a1a 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="dot-grid"></div>
+
+<header>
+  <h1>Draw a <span>digit</span></h1>
+  <p>Neural network built from scratch · 97.97% accuracy</p>
+</header>
+
+<div class="main">
+  <div class="canvas-side">
+    <span class="canvas-label">Your drawing</span>
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="drawCanvas" width="280" height="280"></canvas>
+    </div>
+    <div class="btn-row">
+      <button onclick="clearCanvas()">Clear</button>
+      <button class="primary" onclick="predict()">Predict →</button>
+    </div>
+    <div class="status" id="status">draw a digit above</div>
+  </div>
+
+  <div class="result-side">
+    <div class="prediction-box" id="predictionBox">
+      <div class="prediction-number empty" id="predictionNumber">?</div>
+      <div class="confidence-text" id="confidenceText">draw something to predict</div>
+    </div>
+
+    <span class="bars-label">All probabilities</span>
+    <div class="bars" id="bars"></div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('drawCanvas');
+  const ctx = canvas.getContext('2d');
+  const wrapper = document.getElementById('canvasWrapper');
+  let drawing = false;
+  let hasDrawn = false;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, 280, 280);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const bars = document.getElementById('bars');
+  for (let i = 0; i < 10; i++) {
+    bars.innerHTML += `
+      <div class="bar-row">
+        <span class="bar-digit">${i}</span>
+        <div class="bar-track"><div class="bar-fill" id="bar${i}"></div></div>
+        <span class="bar-pct" id="pct${i}">—</span>
+      </div>`;
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  }
+
+  canvas.addEventListener('mousedown', e => { drawing = true; hasDrawn = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); wrapper.classList.add('drawing'); });
+  canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+  canvas.addEventListener('mouseup', () => { drawing = false; wrapper.classList.remove('drawing'); });
+  canvas.addEventListener('mouseleave', () => { drawing = false; wrapper.classList.remove('drawing'); });
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; hasDrawn = true; ctx.beginPath(); const p = getPos(e); ctx.moveTo(p.x, p.y); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+  canvas.addEventListener('touchend', () => { drawing = false; });
+
+  function clearCanvas() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 280, 280);
+    hasDrawn = false;
+    document.getElementById('predictionNumber').textContent = '?';
+    document.getElementById('predictionNumber').classList.add('empty');
+    document.getElementById('confidenceText').textContent = 'draw something to predict';
+    document.getElementById('predictionBox').classList.remove('has-result');
+    document.getElementById('status').textContent = 'draw a digit above';
+    document.getElementById('status').className = 'status';
+    for (let i = 0; i < 10; i++) {
+      document.getElementById('bar' + i).style.width = '0%';
+      document.getElementById('bar' + i).classList.remove('top');
+      document.getElementById('pct' + i).textContent = '—';
+    }
+  }
+
+  async function predict() {
+    if (!hasDrawn) {
+      document.getElementById('status').textContent = 'draw a digit first';
+      return;
+    }
+    const status = document.getElementById('status');
+    status.textContent = 'thinking...';
+    status.className = 'status thinking';
+
+    const imageData = canvas.toDataURL('image/png');
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: imageData })
+      });
+      const data = await res.json();
+
+      document.getElementById('predictionNumber').textContent = data.digit;
+      document.getElementById('predictionNumber').classList.remove('empty');
+      document.getElementById('confidenceText').innerHTML = `confidence <span>${data.confidence.toFixed(1)}%</span>`;
+      document.getElementById('predictionBox').classList.add('has-result');
+      status.textContent = 'prediction complete';
+      status.className = 'status';
+
+      for (let i = 0; i < 10; i++) {
+        const bar = document.getElementById('bar' + i);
+        const pct = document.getElementById('pct' + i);
+        bar.style.width = data.probabilities[i] + '%';
+        bar.classList.toggle('top', i === data.digit);
+        pct.textContent = data.probabilities[i].toFixed(1) + '%';
+      }
+    } catch (err) {
+      status.textContent = 'error — is the server running?';
+      status.className = 'status';
+    }
+  }
+</script>
+</body>
+</html>
