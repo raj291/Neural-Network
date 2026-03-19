@@ -1,6 +1,6 @@
 from load_data import training_data , training_label
 from network import forward_pass,cross_entropy_loss,backpropogation, initialize_network
-
+import numpy as np
 W1, W2, b1, b2 = initialize_network(784, 128, 10)
 learning_rate = 0.01
 for epoch in range(20):
@@ -12,3 +12,10 @@ for epoch in range(20):
         total_loss += loss
     
     print(f"Epoch {epoch+1}, Loss: {total_loss / len(training_data)}")
+
+
+np.save('W1.npy', W1)
+np.save('W2.npy', W2)
+np.save('b1.npy', b1)
+np.save('b2.npy', b2)
+print("Weights saved.")

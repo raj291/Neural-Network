@@ -31,8 +31,3 @@ with open('test_data/t10k-labels.idx1-ubyte', 'rb') as testing_label_file:
 training_data = training_data / 255.0
 testing_data = testing_data / 255.0
 
-print("Training data shape:", training_data.shape)
-print("Training label shape:", training_label.shape)
-print("Testing data shape:", testing_data.shape)        
-print("Testing label shape:", testing_label.shape)
-
